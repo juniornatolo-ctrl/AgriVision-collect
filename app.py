@@ -143,37 +143,32 @@ def login_user(username: str, password: str):
     return dict(row), None
 
 def get_user_by_id(user_id: int):
-    init_db()
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC", (int(user_id),))
-    rows = cursor.fetchall()
-    cols = [d[0] for d in cursor.description] if cursor.description else []
-    conn.close()
-    return pd.DataFrame(rows, columns=cols) if cols else pd.DataFrame()
-    init_db()
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC", (int(user_id),))
-    rows = cursor.fetchall()
-    cols = [d[0] for d in cursor.description] if cursor.description else []
-    conn.close()
-    return pd.DataFrame(rows, columns=cols) if cols else pd.DataFrame()
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+    return dict(row) if row else None
+
+# ─── DONNÉES ──────────────────────────────────────────────────────────────────
+@st.cache_data(ttl=30)
+def load_data(user_id: int) -> pd.DataFrame:
+    with get_conn() as conn:
+        df = pd.read_sql(
+            "SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC",
+            conn, params=(user_id,)
+        )
+    return df
 
 def invalidate_cache():
-    pass  # cache désactivé
+    load_data.clear()
 
 def insert_collecte(user_id, pays, region, culture, superficie, rendement,
                     sol, irrigation, engrais, maladie, ph_sol, temperature,
                     pluviometrie, notes):
-    init_db()
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC", (int(user_id),))
-    rows = cursor.fetchall()
-    cols = [d[0] for d in cursor.description] if cursor.description else []
-    conn.close()
-    return pd.DataFrame(rows, columns=cols) if cols else pd.DataFrame()
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT INTO collectes
+            (user_id,date_saisie,pays,region,culture,superficie,rendement,
+             sol,irrigation,engrais,maladie,ph_sol,temperature,pluviometrie,notes)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (user_id, datetime.date.today().isoformat(), pays, region, culture,
               superficie, rendement, sol, irrigation, engrais, maladie,
               ph_sol, temperature, pluviometrie, notes))
@@ -182,14 +177,12 @@ def insert_collecte(user_id, pays, region, culture, superficie, rendement,
 
 def delete_collecte(collecte_id: int, user_id: int):
     """Supprime seulement si appartient à l'utilisateur (sécurité)."""
-    init_db()
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC", (int(user_id),))
-    rows = cursor.fetchall()
-    cols = [d[0] for d in cursor.description] if cursor.description else []
-    conn.close()
-    return pd.DataFrame(rows, columns=cols) if cols else pd.DataFrame()
+    with get_conn() as conn:
+        conn.execute(
+            "DELETE FROM collectes WHERE id=? AND user_id=?",
+            (collecte_id, user_id)
+        )
+        conn.commit()
     invalidate_cache()
 
 # ─── MODULE IA ────────────────────────────────────────────────────────────────
