@@ -152,8 +152,8 @@ def get_user_by_id(user_id: int):
 def load_data(user_id: int) -> pd.DataFrame:
     with get_conn() as conn:
         df = pd.read_sql(
-            "SELECT * FROM collectes WHERE user_id=" + str(int(user_id)) + " ORDER BY date_saisie DESC",
-            conn
+            "SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC",
+            conn, params=(user_id,)
         )
     return df
 
