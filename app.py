@@ -148,7 +148,6 @@ def get_user_by_id(user_id: int):
     return dict(row) if row else None
 
 # ─── DONNÉES ──────────────────────────────────────────────────────────────────
-@st.cache_data(ttl=30)
 def load_data(user_id: int) -> pd.DataFrame:
     with get_conn() as conn:
         df = pd.read_sql(
@@ -158,7 +157,7 @@ def load_data(user_id: int) -> pd.DataFrame:
     return df
 
 def invalidate_cache():
-    load_data.clear()
+    pass  # cache désactivé
 
 def insert_collecte(user_id, pays, region, culture, superficie, rendement,
                     sol, irrigation, engrais, maladie, ph_sol, temperature,
