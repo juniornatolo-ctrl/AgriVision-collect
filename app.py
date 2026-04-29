@@ -126,8 +126,6 @@ GREEN_PALETTE = px.colors.sequential.Greens
 
 init_db()
 
-init_db()
-
 # ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### 🌱 AgriVision AI")
