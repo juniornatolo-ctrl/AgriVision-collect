@@ -152,6 +152,7 @@ def load_data(user_id: int) -> pd.DataFrame:
     init_db()
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     cursor = conn.cursor()
+    init_db()
     cursor.execute("SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC", (int(user_id),))
     rows = cursor.fetchall()
     cols = [d[0] for d in cursor.description] if cursor.description else []
