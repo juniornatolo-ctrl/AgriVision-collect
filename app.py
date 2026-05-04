@@ -14,6 +14,7 @@ def check_db():
     conn = sqlite3.connect('agrivision.db')
     cursor = conn.cursor()
     cursor.execute('''
+        cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT, username TEXT UNIQUE, password TEXT, pays_defaut TEXT)")
         CREATE TABLE IF NOT EXISTS collectes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -106,6 +107,7 @@ def init_db():
         """)
         # Table collectes avec user_id
         conn.execute("""
+        cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT, username TEXT UNIQUE, password TEXT, pays_defaut TEXT)")
             CREATE TABLE IF NOT EXISTS collectes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -1065,6 +1067,7 @@ def check_db():
     with sqlite3.connect('agrivision.db') as conn:
         cursor = conn.cursor()
         cursor.execute('''
+        cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT, username TEXT UNIQUE, password TEXT, pays_defaut TEXT)")
             CREATE TABLE IF NOT EXISTS collectes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -1092,3 +1095,19 @@ if st.session_state.user is None:
 else:
     show_app()
 
+
+def create_account():
+    st.subheader("Créer un nouveau compte")
+    new_nom = st.text_input("Nom complet")
+    new_user = st.text_input("Nom d'utilisateur")
+    new_pw = st.text_input("Mot de passe", type='password')
+    
+    if st.button("S'enregistrer"):
+        with sqlite3.connect('agrivision.db') as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute("INSERT INTO users (nom, username, password) VALUES (?, ?, ?)", (new_nom, new_user, new_pw))
+                conn.commit()
+                st.success("Compte créé avec succès ! Vous pouvez maintenant vous connecter.")
+            except:
+                st.error("Ce nom d'utilisateur existe déjà.")
