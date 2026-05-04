@@ -14,7 +14,6 @@ def check_db():
     conn = sqlite3.connect('agrivision.db')
     cursor = conn.cursor()
     cursor.execute('''
-        cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT, username TEXT UNIQUE, password TEXT, pays_defaut TEXT)")
         CREATE TABLE IF NOT EXISTS collectes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -107,7 +106,6 @@ def init_db():
         """)
         # Table collectes avec user_id
         conn.execute("""
-        cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT, username TEXT UNIQUE, password TEXT, pays_defaut TEXT)")
             CREATE TABLE IF NOT EXISTS collectes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -176,7 +174,7 @@ def load_data(user_id: int) -> pd.DataFrame:
     init_db()
     #cursor.execute("SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC", (int(user_id),))
     def load_data(user_id):
-        conn = sqlite3.connect('agrivision.db')
+    conn = sqlite3.connect('agrivision.db')
     cursor = conn.cursor()
     try:
         cursor.execute("SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC", (int(user_id),))
@@ -491,7 +489,7 @@ def show_app():
     # PAGE 1 : TABLEAU DE BORD
     # ══════════════════════════════════════════════════════════════
     if page == "📊 Tableau de bord":
-        nom_affiche = user.get("nom") or user.get("username") or "Utilisateur"
+        nom_affiche = user.get("nom") or user["username"]
         st.markdown(f"## 📊 Tableau de bord — Bonjour, {nom_affiche} 👋")
 
         df = load_data(user_id)
@@ -1064,50 +1062,36 @@ def show_app():
 
 # 1. On définit la fonction de vérification
 def check_db():
-    with sqlite3.connect('agrivision.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-        cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT, username TEXT UNIQUE, password TEXT, pays_defaut TEXT)")
-            CREATE TABLE IF NOT EXISTS collectes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                date_saisie TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                culture TEXT,
-                maladie TEXT,
-                image_path TEXT,
-                description TEXT
-            )
-        ''')
-        conn.commit()
-
-# 2. On l'appelle IMPÉRATIVEMENT avant tout le reste
-check_db()
-
-# À ajouter temporairement pour tester
-if st.button("Se connecter (Test)"):
-    st.session_state.user = {"id": 1, "name": "Junior"}
-    st.rerun()
-
-# 3. On gère l'affichage
-if st.session_state.user is None:
-    st.warning("Veuillez vous connecter pour accéder à AgriVision.")
+    conn = sqlite3.connect('agrivision.db')
+    cursor = conn.cursor()
+    
+    # 1. Table des utilisateurs (Ajoutée proprement)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            nom TEXT, 
+            username TEXT UNIQUE, 
+            password TEXT, 
+            pays_defaut TEXT
+        )
+    ''')
+    
+    # 2. Table des collectes
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS collectes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            culture TEXT,
+            superficie REAL,
+            rendement REAL,
+            date_saisie TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
     # Ici, vous pouvez appeler votre fonction de login si vous en avez une
 else:
     show_app()
 
-
-def create_account():
-    st.subheader("Créer un nouveau compte")
-    new_nom = st.text_input("Nom complet")
-    new_user = st.text_input("Nom d'utilisateur")
-    new_pw = st.text_input("Mot de passe", type='password')
-    
-    if st.button("S'enregistrer"):
-        with sqlite3.connect('agrivision.db') as conn:
-            cursor = conn.cursor()
-            try:
-                cursor.execute("INSERT INTO users (nom, username, password) VALUES (?, ?, ?)", (new_nom, new_user, new_pw))
-                conn.commit()
-                st.success("Compte créé avec succès ! Vous pouvez maintenant vous connecter.")
-            except:
-                st.error("Ce nom d'utilisateur existe déjà.")
