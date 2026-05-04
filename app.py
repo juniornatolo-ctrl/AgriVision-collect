@@ -9,6 +9,25 @@ import json
 import hashlib
 import secrets
 
+# Cette fonction s'assure que la base est toujours prête
+def check_db():
+    conn = sqlite3.connect('agrivision.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS collectes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            date_saisie TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            culture TEXT,
+            maladie TEXT,
+            image_path TEXT,
+            description TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+check_db()
 # ─── CONFIG PAGE ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="AgriVision AI",
@@ -153,7 +172,21 @@ def load_data(user_id: int) -> pd.DataFrame:
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     cursor = conn.cursor()
     init_db()
-    cursor.execute("SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC", (int(user_id),))
+    #cursor.execute("SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC", (int(user_id),))
+    def load_data(user_id):
+        conn = sqlite3.connect('agrivision.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC", (int(user_id),))
+        # ... reste du code
+    except sqlite3.OperationalError as e:
+        if "no such column: user_id" in str(e):
+            # Si la colonne manque, on l'ajoute dynamiquement
+            cursor.execute("ALTER TABLE collectes ADD COLUMN user_id INTEGER DEFAULT 1")
+            conn.commit()
+            # On réessaie la lecture
+            cursor.execute("SELECT * FROM collectes WHERE user_id=? ORDER BY date_saisie DESC", (int(user_id),))
+    # ...
     rows = cursor.fetchall()
     cols = [d[0] for d in cursor.description] if cursor.description else []
     conn.close()
@@ -421,7 +454,12 @@ def show_app():
         st.markdown(f"### 🌱 AgriVision AI")
         st.markdown(f"*Smart farming for Africa's future*")
         st.markdown("---")
-        nom_affiche = user.get("nom") or user["username"]
+        # Remplacez la ligne 443 par celle-ci :
+# Ligne 443 (Bien alignée)
+        nom_affiche = user.get("nom") or user.get("username") or "Utilisateur"
+        
+        # Ligne 444 (Vérifiez qu'il n'y a pas d'espace en trop au début)
+        st.markdown(f"👤 **{nom_affiche}**")
         st.markdown(f"👤 **{nom_affiche}**")
         st.markdown(f"🌍 {user.get('pays_defaut', '')}")
         st.markdown("---")
@@ -451,7 +489,7 @@ def show_app():
     # PAGE 1 : TABLEAU DE BORD
     # ══════════════════════════════════════════════════════════════
     if page == "📊 Tableau de bord":
-        nom_affiche = user.get("nom") or user["username"]
+        nom_affiche = user.get("nom") or user.get("username") or "Utilisateur"
         st.markdown(f"## 📊 Tableau de bord — Bonjour, {nom_affiche} 👋")
 
         df = load_data(user_id)
@@ -1020,7 +1058,37 @@ def show_app():
 
 
 # ─── POINT D'ENTRÉE ───────────────────────────────────────────────────────────
+# --- POINT D'ENTRÉE ---
+
+# 1. On définit la fonction de vérification
+def check_db():
+    with sqlite3.connect('agrivision.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS collectes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                date_saisie TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                culture TEXT,
+                maladie TEXT,
+                image_path TEXT,
+                description TEXT
+            )
+        ''')
+        conn.commit()
+
+# 2. On l'appelle IMPÉRATIVEMENT avant tout le reste
+check_db()
+
+# À ajouter temporairement pour tester
+if st.button("Se connecter (Test)"):
+    st.session_state.user = {"id": 1, "name": "Junior"}
+    st.rerun()
+
+# 3. On gère l'affichage
 if st.session_state.user is None:
-    show_auth()
+    st.warning("Veuillez vous connecter pour accéder à AgriVision.")
+    # Ici, vous pouvez appeler votre fonction de login si vous en avez une
 else:
     show_app()
+
